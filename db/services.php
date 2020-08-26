@@ -71,5 +71,13 @@ $functions = [
         'description'   => 'Gets a list of cohort enrolment instances.',
         'capabilities'  => $getcapabilities,
         'type'          => 'get'
+    ],
+    'enrol_airtime_update_user_enrollment' => [
+        'classname'     => 'enrol_airtime\external',
+        'methodname'    => 'update_user_enrollment',
+        'classpath'     => '',
+        'description'   => 'Update user enrolment',
+        'capabilities'  => $updatecapabilities,
+        'type'          => 'update'
     ]
 ];

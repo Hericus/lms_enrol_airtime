@@ -34,6 +34,7 @@ use context_course;
 use context_helper;
 use context_user;
 use coding_exception;
+use enrol_airtime\tools;
 use external_api;
 use external_function_parameters;
 use external_value;
@@ -42,21 +43,20 @@ use external_single_structure;
 use external_multiple_structure;
 use invalid_parameter_exception;
 use required_capability_exception;
-
-use \enrol_airtime\tools;
-use \enrol_airtime\responses;
-
-use \enrol_airtime\exceptions\course_not_found_exception;
-use \enrol_airtime\exceptions\cohort_not_found_exception;
-use \enrol_airtime\exceptions\role_not_found_exception;
-use \enrol_airtime\exceptions\group_not_found_exception;
-use \enrol_airtime\exceptions\course_is_site_exception;
-use \enrol_airtime\exceptions\cohort_not_available_at_context_exception;
-use \enrol_airtime\exceptions\role_not_assignable_at_context_exception;
-use \enrol_airtime\exceptions\invalid_status_exception;
-use \enrol_airtime\exceptions\cohort_enrol_method_not_available_exception;
-use \enrol_airtime\exceptions\cohort_enrol_instance_already_synced_with_role_exception;
-use \enrol_airtime\exceptions\cohort_enrol_instance_not_found_exception;
+use enrol_airtime\responses;
+use enrol_airtime\exceptions\course_not_found_exception;
+use enrol_airtime\exceptions\cohort_not_found_exception;
+use enrol_airtime\exceptions\role_not_found_exception;
+use enrol_airtime\exceptions\group_not_found_exception;
+use enrol_airtime\exceptions\course_is_site_exception;
+use enrol_airtime\exceptions\cohort_not_available_at_context_exception;
+use enrol_airtime\exceptions\role_not_assignable_at_context_exception;
+use enrol_airtime\exceptions\invalid_status_exception;
+use enrol_airtime\exceptions\cohort_enrol_method_not_available_exception;
+use enrol_airtime\exceptions\cohort_enrol_instance_already_synced_with_role_exception;
+use enrol_airtime\exceptions\cohort_enrol_instance_not_found_exception;
+use enrol_airtime\exceptions\user_not_found_exception;
+use enrol_airtime\exceptions\user_enrollment_not_found_exception;
 
 
 /**
@@ -72,6 +72,7 @@ class external extends external_api {
      */
     const QUERYSTRING_INSTANCE  = 'instance';
     const QUERYSTRING_COURSE    = 'course';
+    const QUERYSTRING_ENROLLMENT    = 'enrollment';
 
     /**
      * Constants that define group creation modes. Create group is already defined. Values are as per the add instance mform.
@@ -977,4 +978,147 @@ class external extends external_api {
     }
 
     /// </editor-fold>
+
+    /**
+     * Returns description of the update_instance() function parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function update_user_enrollment_parameters() {
+        return new external_function_parameters([
+            self::QUERYSTRING_ENROLLMENT => new external_single_structure([
+                'userid'      => new external_value(PARAM_INT, 'The id of the User.', VALUE_REQUIRED),
+                'courseid'      => new external_value(PARAM_INT, 'The id of the Course.', VALUE_REQUIRED),
+                'status'  => new external_value(PARAM_INT, 'The status of the user enrollment .', VALUE_OPTIONAL),
+                'timestart'  => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                'timeend' => new external_value(PARAM_INT, '', VALUE_OPTIONAL)
+            ])
+        ]);
+    }
+
+    /**
+     * Returns description of the update_user_enrollment function return value.
+     *
+     * @return external_single_structure
+     */
+    public static function update_user_enrollment_returns() {
+        return self::webservice_function_returns();
+    }
+
+    /**
+     * Updates an existing cohort enrolment instance.
+     *
+     * @param $params
+     * @return array
+     * @throws coding_exception
+     * @throws dml_exception
+     * @throws invalid_parameter_exception
+     * @throws moodle_exception
+     */
+    public static function update_user_enrollment($params) {
+        global $DB, $SITE;
+
+        // Check the call for parameters.
+        $params = self::validate_parameters(self::update_user_enrollment_parameters(), [self::QUERYSTRING_ENROLLMENT => $params]);
+
+        // This is the important one. Check if the cohort enrolment instance is available for use.
+        if (!$cohortenrolment = enrol_get_plugin('airtime')) {
+            throw new cohort_enrol_method_not_available_exception();
+        }
+
+        // Other data.
+        $extradata = [];
+
+        // Preset the context.
+        $context = null;
+
+        // Get the enrolment instance id.
+        $userid = $params[self::QUERYSTRING_ENROLLMENT]['userid'];
+        $courseid = $params[self::QUERYSTRING_ENROLLMENT]['courseid'];
+
+        if (!$user = $DB->get_record('user', ['id' => $userid])) {
+            throw new user_not_found_exception($userid);
+        }
+
+        // Validate the enrolment instance.
+        $sqlwhere = "enrol = 'airtime' AND courseid = :courseid";
+        $sqlparams = ['courseid' => $courseid];
+
+        $enrolmentinstance = null;
+
+        if (!$enrollinstances = $DB->get_records_select('enrol', $sqlwhere, $sqlparams)) {
+            throw new cohort_enrol_instance_not_found_exception();
+        }
+
+        list($insql, $sqlparams) = $DB->get_in_or_equal(array_keys($enrollinstances), SQL_PARAMS_NAMED);
+
+        $sqlparams['userid'] = $userid;
+
+        if (!$userenrollments = $DB->get_records_select('user_enrolments', "enrolid {$insql} AND userid = :userid", $sqlparams)) {
+            throw new user_enrollment_not_found_exception();
+        }
+
+        $noupdations = true;
+
+        foreach ($userenrollments as $userenrollment) {
+            $update = false;
+
+            $data = new \stdClass();
+            $data->id = $userenrollment->id;
+
+            // Get the enrolment instance status.
+            if (isset($params[self::QUERYSTRING_ENROLLMENT]['status'])) {
+               $status = $params[self::QUERYSTRING_ENROLLMENT]['status'];
+
+               // Validate the enrolment instance status.
+                if (!is_null($status) && !in_array($status, [ENROL_USER_ACTIVE, ENROL_USER_SUSPENDED])) {
+                    throw new invalid_status_exception($status);
+                } else if (!is_null($status) && in_array($status, [ENROL_USER_ACTIVE, ENROL_USER_SUSPENDED])) {
+                    $data->status = $status;
+                    $update = true;
+                }
+            }
+
+            if (isset($params[self::QUERYSTRING_ENROLLMENT]['timestart'])) {
+                $data->timestart = $params[self::QUERYSTRING_ENROLLMENT]['timestart'];
+                $update = true;
+            }
+
+            if (isset($params[self::QUERYSTRING_ENROLLMENT]['timeend'])) {
+                $data->timeend = $params[self::QUERYSTRING_ENROLLMENT]['timeend'];
+                $update = true;
+            }
+
+            if ($update) {
+                $DB->update_record('user_enrolments', $data);
+                $noupdations = false;
+                $extradata[] = [
+                    'object' => 'user_enrolments',
+                    'id' =>  $data->id,
+                    'courseid' => $courseid
+                ];
+            }
+        }
+
+        // Response message.
+        if ($noupdations) {
+            $message = tools::get_string('updateinstance:nochange');
+        } else {
+            $message = tools::get_string('updateinstance:200');
+        }
+
+        // The HTTP status code.
+        $code = 200;
+
+        // Prepare the response.
+        $response = [
+            'id'        => $userid,
+            'code'      => $code,
+            'message'   => $message,
+            'data'      => $extradata
+        ];
+
+        return $response;
+    }
+
 }
