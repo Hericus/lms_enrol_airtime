@@ -28,6 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->dirroot.'/cohort/lib.php');
 require_once($CFG->dirroot.'/group/lib.php');
+require_once($CFG->dirroot.'/enrol/airtime/lib.php');
 
 /**
  * Contains tests for the cohort library.

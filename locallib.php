@@ -189,10 +189,9 @@ function enrol_airtime_sync(progress_trace $trace, $courseid = NULL) {
               JOIN {enrol} e ON (e.customint1 = cm.cohortid AND e.enrol = 'airtime' AND e.status = :enrolstatus $onecourse)
               JOIN {user} u ON (u.id = cm.userid AND u.deleted = 0)
          LEFT JOIN {user_enrolments} ue ON (ue.enrolid = e.id AND ue.userid = cm.userid)
-             WHERE ue.id IS NULL OR ue.status = :suspended";
+             WHERE ue.id IS NULL";
     $params = array();
     $params['courseid'] = $courseid;
-    $params['suspended'] = ENROL_USER_SUSPENDED;
     $params['enrolstatus'] = ENROL_INSTANCE_ENABLED;
     $rs = $DB->get_recordset_sql($sql, $params);
     foreach($rs as $ue) {
@@ -200,13 +199,8 @@ function enrol_airtime_sync(progress_trace $trace, $courseid = NULL) {
             $instances[$ue->enrolid] = $DB->get_record('enrol', array('id'=>$ue->enrolid));
         }
         $instance = $instances[$ue->enrolid];
-        if ($ue->status == ENROL_USER_SUSPENDED) {
-            $plugin->update_user_enrol($instance, $ue->userid, ENROL_USER_ACTIVE);
-            $trace->output("unsuspending: $ue->userid ==> $instance->courseid via cohort $instance->customint1", 1);
-        } else {
-            $plugin->enrol_user($instance, $ue->userid);
-            $trace->output("enrolling: $ue->userid ==> $instance->courseid via cohort $instance->customint1", 1);
-        }
+        $plugin->enrol_user($instance, $ue->userid);
+        $trace->output("enrolling: $ue->userid ==> $instance->courseid via cohort $instance->customint1", 1);
     }
     $rs->close();
 

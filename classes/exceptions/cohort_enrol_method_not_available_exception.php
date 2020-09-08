@@ -15,15 +15,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Cohort enrolment plugin version specification.
+ * Cohort enrolment method not available exception for enrol_airtime.
  *
- * @package    enrol_airtime
- * @copyright  2010 Petr Skoda {@link http://skodak.org}
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package     enrol_airtime
+ * @author      Donald Barrett <donald.barrett@learningworks.co.nz>
+ * @copyright   2018 onwards, LearningWorks ltd
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace enrol_airtime\exceptions;
+
+// No direct access.
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2019052002;        // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2019051100;        // Requires this Moodle version
-$plugin->component = 'enrol_airtime';    // Full name of the plugin (used for diagnostics)
+use enrol_airtime\tools;
+
+class cohort_enrol_method_not_available_exception extends \moodle_exception {
+    public function __construct() {
+        parent::__construct('cohortenrolmethodnotavailable', tools::COMPONENT_NAME);
+    }
+}
