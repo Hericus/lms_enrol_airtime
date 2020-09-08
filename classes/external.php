@@ -985,15 +985,21 @@ class external extends external_api {
      * @return external_function_parameters
      */
     public static function update_user_enrollment_parameters() {
-        return new external_function_parameters([
-            self::QUERYSTRING_ENROLLMENT => new external_single_structure([
-                'userid'      => new external_value(PARAM_INT, 'The id of the User.', VALUE_REQUIRED),
-                'courseid'      => new external_value(PARAM_INT, 'The id of the Course.', VALUE_REQUIRED),
-                'status'  => new external_value(PARAM_INT, 'The status of the user enrollment .', VALUE_OPTIONAL),
-                'timestart'  => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
-                'timeend' => new external_value(PARAM_INT, '', VALUE_OPTIONAL)
-            ])
-        ]);
+        return new external_function_parameters(
+                array(
+                        self::QUERYSTRING_ENROLLMENT => new external_multiple_structure(
+                                new external_single_structure(
+                                        array(
+                                                'userid' => new external_value(PARAM_INT, 'The id of the User.', VALUE_REQUIRED),
+                                                'courseid' => new external_value(PARAM_INT, 'The id of the Course.', VALUE_REQUIRED),
+                                                'suspend' => new external_value(PARAM_INT, 'The status of the user enrollment .', VALUE_OPTIONAL),
+                                                'timestart' => new external_value(PARAM_INT, '', VALUE_OPTIONAL),
+                                                'timeend' => new external_value(PARAM_INT, '', VALUE_OPTIONAL)
+                                        )
+                                )
+                        )
+                )
+        );
     }
 
     /**
@@ -1032,71 +1038,74 @@ class external extends external_api {
         // Preset the context.
         $context = null;
 
-        // Get the enrolment instance id.
-        $userid = $params[self::QUERYSTRING_ENROLLMENT]['userid'];
-        $courseid = $params[self::QUERYSTRING_ENROLLMENT]['courseid'];
+        foreach ($params['enrollment'] as $enrollrecord) {
+            // Get the enrolment instance id.
+            $userid = $enrollrecord['userid'];
+            $courseid = $enrollrecord['courseid'];
 
-        if (!$user = $DB->get_record('user', ['id' => $userid])) {
-            throw new user_not_found_exception($userid);
-        }
+            if (!$user = $DB->get_record('user', ['id' => $userid])) {
+                throw new user_not_found_exception($userid);
+            }
 
-        // Validate the enrolment instance.
-        $sqlwhere = "enrol = 'airtime' AND courseid = :courseid";
-        $sqlparams = ['courseid' => $courseid];
+            // Validate the enrolment instance.
+            $sqlwhere = "enrol = 'airtime' AND courseid = :courseid";
+            $sqlparams = ['courseid' => $courseid];
 
-        $enrolmentinstance = null;
+            $enrolmentinstance = null;
 
-        if (!$enrollinstances = $DB->get_records_select('enrol', $sqlwhere, $sqlparams)) {
-            throw new cohort_enrol_instance_not_found_exception();
-        }
+            if (!$enrollinstances = $DB->get_records_select('enrol', $sqlwhere, $sqlparams)) {
+                throw new cohort_enrol_instance_not_found_exception();
+            }
 
-        list($insql, $sqlparams) = $DB->get_in_or_equal(array_keys($enrollinstances), SQL_PARAMS_NAMED);
+            list($insql, $sqlparams) = $DB->get_in_or_equal(array_keys($enrollinstances), SQL_PARAMS_NAMED);
 
-        $sqlparams['userid'] = $userid;
+            $sqlparams['userid'] = $userid;
 
-        if (!$userenrollments = $DB->get_records_select('user_enrolments', "enrolid {$insql} AND userid = :userid", $sqlparams)) {
-            throw new user_enrollment_not_found_exception();
-        }
+            if (!$userenrollments =
+                    $DB->get_records_select('user_enrolments', "enrolid {$insql} AND userid = :userid", $sqlparams)) {
+                throw new user_enrollment_not_found_exception();
+            }
 
-        $noupdations = true;
+            $noupdations = true;
 
-        foreach ($userenrollments as $userenrollment) {
-            $update = false;
+            foreach ($userenrollments as $userenrollment) {
+                $update = false;
 
-            $data = new \stdClass();
-            $data->id = $userenrollment->id;
+                $data = new \stdClass();
+                $data->id = $userenrollment->id;
 
-            // Get the enrolment instance status.
-            if (isset($params[self::QUERYSTRING_ENROLLMENT]['status'])) {
-               $status = $params[self::QUERYSTRING_ENROLLMENT]['status'];
+                // Get the enrolment instance status.
+                if (isset($enrollrecord['suspend'])) {
+                    $status = $enrollrecord['suspend'];
 
-               // Validate the enrolment instance status.
-                if (!is_null($status) && !in_array($status, [ENROL_USER_ACTIVE, ENROL_USER_SUSPENDED])) {
-                    throw new invalid_status_exception($status);
-                } else if (!is_null($status) && in_array($status, [ENROL_USER_ACTIVE, ENROL_USER_SUSPENDED])) {
-                    $data->status = $status;
+                    // Validate the enrolment instance status.
+                    if (!is_null($status) && !in_array($status, [ENROL_USER_ACTIVE, ENROL_USER_SUSPENDED])) {
+                        throw new invalid_status_exception($status);
+                    } else if (!is_null($status) && in_array($status, [ENROL_USER_ACTIVE, ENROL_USER_SUSPENDED])) {
+                        $data->status = $status;
+                        $update = true;
+                    }
+                }
+
+                if (isset($enrollrecord['timestart'])) {
+                    $data->timestart = $enrollrecord['timestart'];
                     $update = true;
                 }
-            }
 
-            if (isset($params[self::QUERYSTRING_ENROLLMENT]['timestart'])) {
-                $data->timestart = $params[self::QUERYSTRING_ENROLLMENT]['timestart'];
-                $update = true;
-            }
+                if (isset($enrollrecord['timeend'])) {
+                    $data->timeend = $enrollrecord['timeend'];
+                    $update = true;
+                }
 
-            if (isset($params[self::QUERYSTRING_ENROLLMENT]['timeend'])) {
-                $data->timeend = $params[self::QUERYSTRING_ENROLLMENT]['timeend'];
-                $update = true;
-            }
-
-            if ($update) {
-                $DB->update_record('user_enrolments', $data);
-                $noupdations = false;
-                $extradata[] = [
-                    'object' => 'user_enrolments',
-                    'id' =>  $data->id,
-                    'courseid' => $courseid
-                ];
+                if ($update) {
+                    $DB->update_record('user_enrolments', $data);
+                    $noupdations = false;
+                    $extradata[] = [
+                            'object' => 'user_enrolments',
+                            'id' => $data->id,
+                            'courseid' => $courseid
+                    ];
+                }
             }
         }
 

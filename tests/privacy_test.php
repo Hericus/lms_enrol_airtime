@@ -37,6 +37,20 @@ use enrol_airtime\privacy\provider;
  */
 class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testcase {
 
+    protected function enable_plugin() {
+        $enabled = enrol_get_plugins(true);
+        $enabled['airtime'] = true;
+        $enabled = array_keys($enabled);
+        set_config('enrol_plugins_enabled', implode(',', $enabled));
+    }
+
+    protected function disable_plugin() {
+        $enabled = enrol_get_plugins(true);
+        unset($enabled['airtime']);
+        $enabled = array_keys($enabled);
+        set_config('enrol_plugins_enabled', implode(',', $enabled));
+    }
+
     /**
      * Test getting the context for the user ID related to this plugin.
      */
@@ -46,6 +60,7 @@ class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testca
         $this->resetAfterTest();
         $trace = new null_progress_trace();
 
+        $this->enable_plugin();
         $cohortplugin = enrol_get_plugin('airtime');
         $user1 = $this->getDataGenerator()->create_user();
         $cat1 = $this->getDataGenerator()->create_category();
@@ -84,6 +99,7 @@ class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testca
         $this->resetAfterTest();
         $trace = new null_progress_trace();
 
+        $this->enable_plugin();
         $cohortplugin = enrol_get_plugin('airtime');
         $user1 = $this->getDataGenerator()->create_user();
         $cat1 = $this->getDataGenerator()->create_category();
@@ -138,6 +154,7 @@ class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testca
         $this->resetAfterTest();
         $trace = new null_progress_trace();
 
+        $this->enable_plugin();
         $cohortplugin = enrol_get_plugin('airtime');
         $user1 = $this->getDataGenerator()->create_user();
         $user2 = $this->getDataGenerator()->create_user();
@@ -186,6 +203,7 @@ class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testca
         $this->resetAfterTest();
         $trace = new null_progress_trace();
 
+        $this->enable_plugin();
         $cohortplugin = enrol_get_plugin('airtime');
         $user1 = $this->getDataGenerator()->create_user();
         $user2 = $this->getDataGenerator()->create_user();
@@ -267,6 +285,7 @@ class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testca
 
         $trace = new null_progress_trace();
 
+        $this->enable_plugin();
         $cohortplugin = enrol_get_plugin('airtime');
 
         $user1 = $this->getDataGenerator()->create_user();
@@ -356,6 +375,7 @@ class enrol_airtime_privacy_testcase extends \core_privacy\tests\provider_testca
 
         $trace = new null_progress_trace();
 
+        $this->enable_plugin();
         $cohortplugin = enrol_get_plugin('airtime');
 
         $cat1 = $this->getDataGenerator()->create_category();

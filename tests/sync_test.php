@@ -636,4 +636,78 @@ class enrol_airtime_testcase extends advanced_testcase {
         $this->assertTrue(groups_is_member($group1->id, $user4->id));
         $this->assertTrue(groups_is_member($group2->id, $user4->id));
     }
+
+    public function test_suspend_sync() {
+        global $DB;
+
+        $this->resetAfterTest();
+        $trace = new null_progress_trace();
+
+        // Setup a few courses and categories.
+
+        $cohortplugin = enrol_get_plugin('airtime');
+        $manualplugin = enrol_get_plugin('manual');
+
+        $studentrole = $DB->get_record('role', array('shortname'=>'student'));
+        $this->assertNotEmpty($studentrole);
+        $teacherrole = $DB->get_record('role', array('shortname'=>'teacher'));
+        $this->assertNotEmpty($teacherrole);
+        $managerrole = $DB->get_record('role', array('shortname'=>'manager'));
+        $this->assertNotEmpty($managerrole);
+
+        $cat1 = $this->getDataGenerator()->create_category();
+
+        $course1 = $this->getDataGenerator()->create_course(array('category'=>$cat1->id));
+
+        $maninstance1 = $DB->get_record('enrol', array('courseid'=>$course1->id, 'enrol'=>'manual'), '*', MUST_EXIST);
+
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $user3 = $this->getDataGenerator()->create_user();
+        $user4 = $this->getDataGenerator()->create_user();
+
+        $cohort1 = $this->getDataGenerator()->create_cohort(array('contextid'=>context_coursecat::instance($cat1->id)->id));
+
+        $this->enable_plugin();
+
+        $manualplugin->enrol_user($maninstance1, $user4->id, $teacherrole->id);
+        $manualplugin->enrol_user($maninstance1, $user3->id, $managerrole->id);
+
+        $this->assertEquals(2, $DB->count_records('role_assignments', array()));
+        $this->assertEquals(2, $DB->count_records('user_enrolments', array()));
+
+        $id = $cohortplugin->add_instance($course1, array('customint1'=>$cohort1->id, 'roleid'=>$studentrole->id));
+        $cohortinstance1 = $DB->get_record('enrol', array('id'=>$id));
+
+        // Test cohort member add event.
+        cohort_add_member($cohort1->id, $user1->id);
+        cohort_add_member($cohort1->id, $user2->id);
+        cohort_add_member($cohort1->id, $user4->id);
+        $this->assertEquals(5, $DB->count_records('user_enrolments', array('status' => ENROL_USER_ACTIVE)));
+        $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_ACTIVE)));
+        $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user2->id, 'status'=> ENROL_USER_ACTIVE)));
+        $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user4->id, 'status'=> ENROL_USER_ACTIVE)));
+        $this->assertEquals(5, $DB->count_records('role_assignments', array()));
+
+
+        $params = new stdClass();
+        $params->userid = $user1->id;
+        $params->courseid = $course1->id;
+        $params->suspend = ENROL_USER_SUSPENDED;
+        \enrol_airtime\external::update_user_enrollment([(array) $params]);
+        $this->assertEquals(4, $DB->count_records('user_enrolments', array('status' => ENROL_USER_ACTIVE)));
+        $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_SUSPENDED)));
+
+        // Run sync to ensure suspended status sticks after sync
+        enrol_airtime_sync($trace, $course1->id);
+
+        $this->assertEquals(4, $DB->count_records('user_enrolments', array('status' => ENROL_USER_ACTIVE)));
+        $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_SUSPENDED)));
+
+        // Verify unsuspend
+        $params->suspend = ENROL_USER_ACTIVE;
+        \enrol_airtime\external::update_user_enrollment([(array) $params]);
+        $this->assertEquals(5, $DB->count_records('user_enrolments', array('status' => ENROL_USER_ACTIVE)));
+        $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_ACTIVE)));
+    }
 }
