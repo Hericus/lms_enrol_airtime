@@ -676,8 +676,15 @@ class enrol_airtime_testcase extends advanced_testcase {
         $this->assertEquals(2, $DB->count_records('role_assignments', array()));
         $this->assertEquals(2, $DB->count_records('user_enrolments', array()));
 
-        $id = $cohortplugin->add_instance($course1, array('customint1'=>$cohort1->id, 'roleid'=>$studentrole->id));
-        $cohortinstance1 = $DB->get_record('enrol', array('id'=>$id));
+        $params = array(
+                'courseid'  => $course1->id,
+                'cohortid'  => $cohort1->id,
+                'roleid'    => $studentrole->id,
+        );
+        $this->setUser($user3);
+        \enrol_airtime\external::add_instance($params);
+        $cohortinstance1 = $DB->get_record('enrol', array('enrol' => 'airtime', 'courseid' => $course1->id));
+        $this->assertNotEmpty($cohortinstance1);
 
         // Test cohort member add event.
         cohort_add_member($cohort1->id, $user1->id);
@@ -690,11 +697,12 @@ class enrol_airtime_testcase extends advanced_testcase {
         $this->assertEquals(5, $DB->count_records('role_assignments', array()));
 
 
-        $params = new stdClass();
-        $params->userid = $user1->id;
-        $params->courseid = $course1->id;
-        $params->suspend = ENROL_USER_SUSPENDED;
-        \enrol_airtime\external::update_user_enrollment([(array) $params]);
+        $params = array(
+            'userid' => $user1->id,
+            'courseid' => $course1->id,
+            'suspend' => ENROL_USER_SUSPENDED
+        );
+        \enrol_airtime\external::update_user_enrollment([$params]);
         $this->assertEquals(4, $DB->count_records('user_enrolments', array('status' => ENROL_USER_ACTIVE)));
         $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_SUSPENDED)));
 
@@ -705,9 +713,24 @@ class enrol_airtime_testcase extends advanced_testcase {
         $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_SUSPENDED)));
 
         // Verify unsuspend
-        $params->suspend = ENROL_USER_ACTIVE;
-        \enrol_airtime\external::update_user_enrollment([(array) $params]);
+        $params['suspend'] = ENROL_USER_ACTIVE;
+        \enrol_airtime\external::update_user_enrollment([$params]);
         $this->assertEquals(5, $DB->count_records('user_enrolments', array('status' => ENROL_USER_ACTIVE)));
         $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$cohortinstance1->id, 'userid'=>$user1->id, 'status'=> ENROL_USER_ACTIVE)));
+
+        $params = array(
+                'id' => $cohortinstance1->id,
+                'suspend' => 1
+        );
+        \enrol_airtime\external::update_instance($params);
+        $cohortinstance1 = $DB->get_record('enrol', array('enrol' => 'airtime', 'courseid' => $course1->id, 'status' => ENROL_INSTANCE_DISABLED));
+        $this->assertNotEmpty($cohortinstance1);
+
+        $params = array(
+                'id' => $cohortinstance1->id
+        );
+        \enrol_airtime\external::delete_instance($params);
+        $cohortinstance1 = $DB->get_record('enrol', array('enrol' => 'airtime', 'courseid' => $course1->id));
+        $this->assertEmpty($cohortinstance1);
     }
 }

@@ -121,7 +121,7 @@ class external extends external_api {
                         'groupid'   => new external_value(PARAM_INT, 'The id of the group', VALUE_OPTIONAL),
                         'idnumber'  => new external_value(PARAM_RAW, 'The idnumber of the object', VALUE_OPTIONAL),
                         'shortname' => new external_value(PARAM_TEXT, 'The shortname of the object', VALUE_OPTIONAL),
-                        'status'    => new external_value(PARAM_INT, 'The status of the object', VALUE_OPTIONAL),
+                        'suspend'    => new external_value(PARAM_INT, 'The suspend status of the object', VALUE_OPTIONAL),
                         'active'    => new external_value(PARAM_TEXT, 'Enrolment instance is active or not', VALUE_OPTIONAL),
                         'visible'   => new external_value(PARAM_INT, 'The visibility of the object', VALUE_OPTIONAL),
                         'format'    => new external_value(PARAM_PLUGIN, 'The course format', VALUE_OPTIONAL)
@@ -207,7 +207,7 @@ class external extends external_api {
                         'groupid'   => new external_value(PARAM_INT, 'The id of the group', VALUE_OPTIONAL),
                         'idnumber'  => new external_value(PARAM_RAW, 'The idnumber of the object', VALUE_OPTIONAL),
                         'shortname' => new external_value(PARAM_TEXT, 'The shortname of the object', VALUE_OPTIONAL),
-                        'status'    => new external_value(PARAM_INT, 'The status of the object', VALUE_OPTIONAL),
+                        'suspend'    => new external_value(PARAM_INT, 'The suspend status of the object', VALUE_OPTIONAL),
                         'active'    => new external_value(PARAM_TEXT, 'Enrolment instance is active or not', VALUE_OPTIONAL),
                         'visible'   => new external_value(PARAM_INT, 'The visibility of the object', VALUE_OPTIONAL),
                         'format'    => new external_value(PARAM_PLUGIN, 'The course format', VALUE_OPTIONAL),
@@ -285,7 +285,7 @@ class external extends external_api {
                 'roleid'    => $roleidexternalvalue,
                 'groupid'   => $groupidexternalvalue,
                 'name'      => $nameexternalvalue,
-                'status'    => $statusexternalvalue
+                'suspend'    => $statusexternalvalue
             ])
         ]);
     }
@@ -415,17 +415,17 @@ class external extends external_api {
         }
 
         // Validate the status and set to a default.
-        if (!isset($params[self::QUERYSTRING_INSTANCE]['status'])) {
-            $status = self::add_instance_get_parameter_default_value('status');
+        if (!isset($params[self::QUERYSTRING_INSTANCE]['suspend'])) {
+            $status = self::add_instance_get_parameter_default_value('suspend');
         } else {
-            $status = $params[self::QUERYSTRING_INSTANCE]['status'];
+            $status = $params[self::QUERYSTRING_INSTANCE]['suspend'];
         }
 
         if (!is_null($status) && !in_array($status, [ENROL_INSTANCE_ENABLED, ENROL_INSTANCE_DISABLED])) {
             throw new invalid_status_exception($status);
         } else {
             // Set status to the default.
-            $status = self::add_instance_get_parameter_default_value('status');
+            $status = self::add_instance_get_parameter_default_value('suspend');
         }
 
         // This is the important one. Check if the cohort enrolment instance is available for use.
@@ -440,7 +440,7 @@ class external extends external_api {
             'roleid'    => $roleid,
             'groupid'   => $groupid,
             'name'      => $name,
-            'status'    => $status
+            'suspend'    => $status
         ];
 
         // We are anticipating a success.
@@ -538,7 +538,7 @@ class external extends external_api {
             self::QUERYSTRING_INSTANCE => new external_single_structure([
                 'id'      => new external_value(PARAM_INT, 'The id of the enrolment instance.', VALUE_REQUIRED),
                 'name'    => new external_value(PARAM_TEXT, 'The name you want to give the enrolment instance.', VALUE_OPTIONAL),
-                'status'  => new external_value(PARAM_INT, 'The status of the enrolment method.', VALUE_OPTIONAL),
+                'suspend'  => new external_value(PARAM_INT, 'The status of the enrolment method.', VALUE_OPTIONAL),
                 'roleid'  => new external_value(PARAM_INT, 'The id of an existing role to assign users.', VALUE_OPTIONAL),
                 'groupid' => new external_value(PARAM_INT, 'The id of a group to add users to.', VALUE_OPTIONAL)
             ])
@@ -607,10 +607,10 @@ class external extends external_api {
         }
 
         // Get the enrolment instance status.
-        if (!isset($params[self::QUERYSTRING_INSTANCE]['status'])) {
+        if (!isset($params[self::QUERYSTRING_INSTANCE]['suspend'])) {
             $status = $enrolmentinstance->status;
         } else {
-            $status = $params[self::QUERYSTRING_INSTANCE]['status'];
+            $status = $params[self::QUERYSTRING_INSTANCE]['suspend'];
         }
 
         // Validate the enrolment instance status.
@@ -666,7 +666,7 @@ class external extends external_api {
             'object'    => 'params',
             'roleid'    => $roleid,
             'name'      => $name,
-            'status'    => $status,
+            'suspend'    => $status,
             'groupid'   => $groupid
         ];
 
