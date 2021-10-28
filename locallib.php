@@ -48,14 +48,24 @@ class enrol_airtime_handler {
             return true;
         }
 
+        $exclusionsql = '';
+        $params = [
+                'cohortid' => $event->objectid,
+                'enrolstatus' => ENROL_INSTANCE_ENABLED
+        ];
+        if ($exclusions = \enrol_airtime\external::get_user_exclusions($event->relateduserid)) {
+            list($excludedsql, $excludedparams) = $DB->get_in_or_equal($exclusions, SQL_PARAMS_NAMED);
+            $params += $excludedparams;
+            $exclusionsql = " AND e.courseid $excludedsql";
+        }
         // Does any enabled cohort instance want to sync with this cohort?
         $sql = "SELECT e.*, r.id as roleexists
                   FROM {enrol} e
              LEFT JOIN {role} r ON (r.id = e.roleid)
                  WHERE e.customint1 = :cohortid AND e.enrol = 'airtime' AND e.status = :enrolstatus
+                       $exclusionsql
               ORDER BY e.id ASC";
-        $params['cohortid'] = $event->objectid;
-        $params['enrolstatus'] = ENROL_INSTANCE_ENABLED;
+
         if (!$instances = $DB->get_records_sql($sql, $params)) {
             return true;
         }
@@ -188,8 +198,10 @@ function enrol_airtime_sync(progress_trace $trace, $courseid = NULL) {
               FROM {cohort_members} cm
               JOIN {enrol} e ON (e.customint1 = cm.cohortid AND e.enrol = 'airtime' AND e.status = :enrolstatus $onecourse)
               JOIN {user} u ON (u.id = cm.userid AND u.deleted = 0)
+         LEFT JOIN {enrol_airtime_exclusions} eas ON eas.userid = u.id AND eas.courseid = e.courseid
          LEFT JOIN {user_enrolments} ue ON (ue.enrolid = e.id AND ue.userid = cm.userid)
-             WHERE ue.id IS NULL";
+             WHERE ue.id IS NULL
+               AND eas.id IS NULL";
     $params = array();
     $params['courseid'] = $courseid;
     $params['enrolstatus'] = ENROL_INSTANCE_ENABLED;
@@ -210,7 +222,9 @@ function enrol_airtime_sync(progress_trace $trace, $courseid = NULL) {
               FROM {user_enrolments} ue
               JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = 'airtime' $onecourse)
          LEFT JOIN {cohort_members} cm ON (cm.cohortid = e.customint1 AND cm.userid = ue.userid)
-             WHERE cm.id IS NULL";
+         LEFT JOIN {enrol_airtime_exclusions} eas ON eas.userid = ue.userid AND eas.courseid = e.courseid
+             WHERE cm.id IS NULL
+                OR eas.id IS NOT NULL";
     $rs = $DB->get_recordset_sql($sql, array('courseid'=>$courseid));
     foreach($rs as $ue) {
         if (!isset($instances[$ue->enrolid])) {

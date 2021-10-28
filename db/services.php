@@ -79,5 +79,29 @@ $functions = [
         'description'   => 'Update user enrolment',
         'capabilities'  => $updatecapabilities,
         'type'          => 'update'
+    ],
+    'enrol_airtime_add_exclusion' => [
+        'classname'     => 'enrol_airtime\external',
+        'methodname'    => 'add_exclusion',
+        'classpath'     => '',
+        'description'   => 'Add a course exclusion for a user',
+        'capabilities'  => $enrolairtimeconfig,
+        'type'          => 'update'
+    ],
+    'enrol_airtime_remove_exclusion' => [
+        'classname'     => 'enrol_airtime\external',
+        'methodname'    => 'remove_exclusion',
+        'classpath'     => '',
+        'description'   => 'Removes a user\'s course exclusion',
+        'capabilities'  => $enrolairtimeconfig,
+        'type'          => 'update'
+    ],
+    'enrol_airtime_get_user_exclusions' => [
+        'classname'     => 'enrol_airtime\external',
+        'methodname'    => 'get_user_exclusions',
+        'classpath'     => '',
+        'description'   => 'Get course exclusions for a user',
+        'capabilities'  => $enrolairtimeconfig,
+        'type'          => 'get'
     ]
 ];

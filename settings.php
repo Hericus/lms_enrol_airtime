@@ -29,6 +29,11 @@ if ($ADMIN->fulltree) {
     //--- general settings -----------------------------------------------------------------------------------
     $settings->add(new admin_setting_heading('enrol_airtime_settings', '', get_string('pluginname_desc', 'enrol_airtime')));
 
+    // Link to exclusion settings page.
+    $exclusionpage = new moodle_url('/enrol/airtime/enrol_exclusions.php');
+    $url = html_writer::tag('a', get_string('enrol_exclusions', 'enrol_airtime'), ['href' => $exclusionpage,
+            'class' => 'btn btn-primary']);
+    $settings->add(new admin_setting_heading('enrolairtimeexclusions','', $url));
 
     //--- enrol instance defaults ----------------------------------------------------------------------------
     if (!during_initial_install()) {
@@ -43,4 +48,5 @@ if ($ADMIN->fulltree) {
             ENROL_EXT_REMOVED_SUSPENDNOROLES => get_string('extremovedsuspendnoroles', 'enrol'));
         $settings->add(new admin_setting_configselect('enrol_airtime/unenrolaction', get_string('extremovedaction', 'enrol'), get_string('extremovedaction_help', 'enrol'), ENROL_EXT_REMOVED_UNENROL, $options));
     }
+
 }

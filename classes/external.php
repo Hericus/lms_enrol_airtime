@@ -1130,4 +1130,90 @@ class external extends external_api {
         return $response;
     }
 
+    public static function add_exclusion_parameters() {
+        return new external_function_parameters(
+                array(
+                        'userid' => new external_value(PARAM_INT, 'The id of the User.', VALUE_REQUIRED),
+                        'courseid' => new external_value(PARAM_INT, 'The id of the Course.', VALUE_REQUIRED),
+                )
+        );
+    }
+
+    public static function add_exclusion($userid, $courseid) {
+        global $DB;
+
+        $params = self::validate_parameters(self::add_exclusion_parameters(), ['userid' => $userid, 'courseid' => $courseid]);
+
+        if (!$DB->record_exists('user', ['id' => $params['userid']])) {
+            throw new invalid_parameter_exception("User {$params['userid']} not found!");
+        }
+
+        if (!$DB->record_exists('course', ['id' => $params['courseid']])) {
+            throw new invalid_parameter_exception("Course {$params['courseid']} not found!");
+        }
+
+        if (!$DB->record_exists('enrol_airtime_exclusions', ['userid' => $params['userid'], 'courseid' => $params['courseid']])) {
+            $record = new \stdClass();
+            $record->userid = $params['userid'];
+            $record->courseid = $params['courseid'];
+            $DB->insert_record('enrol_airtime_exclusions', $record);
+        }
+
+        return true;
+    }
+
+    public static function add_exclusion_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
+    public static function remove_exclusion_parameters() {
+        return new external_function_parameters(
+                array(
+                        'userid' => new external_value(PARAM_INT, 'The id of the User.', VALUE_REQUIRED),
+                        'courseid' => new external_value(PARAM_INT, 'The id of the Course.', VALUE_REQUIRED),
+                )
+        );
+    }
+
+    public static function remove_exclusion($userid, $courseid) {
+        global $DB;
+
+        $params = self::validate_parameters(self::remove_exclusion_parameters(), ['userid' => $userid, 'courseid' => $courseid]);
+
+        $DB->delete_records('enrol_airtime_exclusions', ['userid' => $params['userid'], 'courseid' => $params['courseid']]);
+
+        return true;
+    }
+
+    public static function remove_exclusion_returns() {
+        return new external_value(PARAM_BOOL, 'True if the update was successful.');
+    }
+
+    public static function get_user_exclusions_parameters() {
+        return new external_function_parameters(
+                array(
+                        'userid' => new external_value(PARAM_INT, 'Moodle user database id', VALUE_REQUIRED),
+                )
+        );
+    }
+
+    public static function get_user_exclusions($userid) {
+        global $DB;
+
+        $params = self::validate_parameters(self::get_user_exclusions_parameters(), ['userid' => $userid]);
+
+        $exclusions = $DB->get_fieldset_select('enrol_airtime_exclusions', 'courseid', 'userid = ?', [$params['userid']]);
+
+        if (empty($exclusions)) {
+            return [];
+        }
+        return $exclusions;
+    }
+
+    public static function get_user_exclusions_returns() {
+        return new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'Moodle course database id')
+        );
+    }
+
 }
