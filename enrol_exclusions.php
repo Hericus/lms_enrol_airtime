@@ -28,9 +28,12 @@ require_once('../../config.php');
 require_once($CFG->dirroot.'/course/lib.php');
 require_once($CFG->dirroot.'/lib/formslib.php');
 
+require_login();
+
 $userid = optional_param('userid', null, PARAM_INT);
 
 $context = context_system::instance();
+require_capability('enrol/airtime:config', $context);
 
 $PAGE->set_pagelayout('admin');
 $PAGE->set_context($context);
