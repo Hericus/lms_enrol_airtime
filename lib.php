@@ -162,18 +162,6 @@ class enrol_airtime_plugin extends enrol_plugin {
     }
 
     /**
-     * Called after updating/inserting course.
-     *
-     * @param bool $inserted true if course just inserted
-     * @param stdClass $course
-     * @param stdClass $data form data
-     * @return void
-     */
-    public function course_updated($inserted, $course, $data) {
-        // It turns out there is no need for cohorts to deal with this hook, see MDL-34870.
-    }
-
-    /**
      * Update instance status
      *
      * @param stdClass $instance

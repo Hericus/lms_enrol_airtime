@@ -28,6 +28,8 @@ require_once('../../config.php');
 require_once($CFG->dirroot.'/course/lib.php');
 require_once($CFG->dirroot.'/lib/formslib.php');
 
+global $CFG, $DB, $OUTPUT, $PAGE;
+
 require_login();
 
 $userid = optional_param('userid', null, PARAM_INT);
@@ -38,7 +40,7 @@ require_capability('enrol/airtime:config', $context);
 $PAGE->set_pagelayout('admin');
 $PAGE->set_context($context);
 
-$PAGE->set_url('/enrol/airtime/enrol_exclusions.php');
+$PAGE->set_url(new moodle_url('/enrol/airtime/enrol_exclusions.php'));
 
 $returnurl = new moodle_url('/enrol/airtime/enrol_exclusions.php', [
     'userid' => $userid

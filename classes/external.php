@@ -26,7 +26,6 @@ namespace enrol_airtime;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once("$CFG->libdir/externallib.php");
 require_once("$CFG->libdir/grade/grade_scale.php");
 
 use context_system;
@@ -35,12 +34,12 @@ use context_helper;
 use context_user;
 use coding_exception;
 use enrol_airtime\tools;
-use external_api;
-use external_function_parameters;
-use external_value;
-use external_format_value;
-use external_single_structure;
-use external_multiple_structure;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_value;
+use core_external\external_format_value;
+use core_external\external_single_structure;
+use core_external\external_multiple_structure;
 use invalid_parameter_exception;
 use required_capability_exception;
 use enrol_airtime\responses;
